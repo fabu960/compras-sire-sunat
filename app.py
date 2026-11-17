@@ -13,8 +13,7 @@ st.set_page_config(
 st.title("🛠️ Procesador de Propuesta - SIRE Compras (80 Campos)")
 st.markdown(
     "Herramienta optimizada para procesar el TXT de compras de SUNAT, aplicar"
-    " las reglas de negocio (incluyendo vaciado de Campos 40 y 41) y exportar"
-    " limpio sin encabezados."
+    " las reglas de negocio y previsualizar tanto la entrada como la salida."
 )
 
 # 1. Carga del archivo TXT del SIRE
@@ -37,14 +36,26 @@ if uploaded_file is not None:
     )
 
     total_columnas = len(df.columns)
+    total_registros = len(df)
     st.success(
         f"¡Archivo **{nombre_original}** cargado con éxito! RUC:"
-        f" **{ruc_extraido}** | Registros: {len(df):,} | Columnas:"
+        f" **{ruc_extraido}** | Registros: {total_registros:,} | Columnas:"
         f" {total_columnas}"
     )
 
-    with st.expander("🔍 Ver vista previa de los datos leídos"):
-      st.dataframe(df.head(10), use_container_width=True)
+    # VISTA PREVIA DE LOS DATOS ORIGINALES
+    with st.expander("🔍 Ver vista previa de los datos originales", expanded=False):
+      ver_todos_orig = st.checkbox("Mostrar todos los registros originales")
+      if ver_todos_orig:
+        num_filas_orig = total_registros
+      else:
+        num_filas_orig = st.slider(
+            "Cantidad de filas a visualizar (Original):",
+            min_value=5,
+            max_value=min(total_registros, 1000),
+            value=min(total_registros, 10),
+        )
+      st.dataframe(df.head(num_filas_orig), use_container_width=True)
 
     st.divider()
     st.subheader("⚙️ Ejecución de Reglas de Negocio")
@@ -171,16 +182,36 @@ if uploaded_file is not None:
       )
       st.session_state["df_procesado"] = df_proc
 
-    # 2. Sección de Descarga (Garantizando SIN ENCABEZADOS y nomenclatura correcta)
+    # 2. Sección de Descarga y Vista Previa de Salida
     if "df_procesado" in st.session_state:
       st.divider()
-      st.subheader("📥 Exportar Archivo de Reemplazo Definitivo")
+      st.subheader("📥 Exportar y Previsualizar Archivo de Reemplazo")
 
       df_final = st.session_state["df_procesado"]
+      total_final_registros = len(df_final)
+
       st.write(
-          f"Registros listos para exportar: **{len(df_final):,}** | Total"
+          f"Registros listos para exportar: **{total_final_registros:,}** | Total"
           f" columnas: **{len(df_final.columns)}**"
       )
+
+      # VISTA PREVIA DEL ARCHIVO DE SALIDA (PROCESADO)
+      with st.expander(
+          "🔍 Ver vista previa del archivo de salida (Procesado)", expanded=True
+      ):
+        ver_todos_proc = st.checkbox(
+            "Mostrar todos los registros procesados en pantalla"
+        )
+        if ver_todos_proc:
+          num_filas_proc = total_final_registros
+        else:
+          num_filas_proc = st.slider(
+              "Cantidad de filas a visualizar (Salida):",
+              min_value=5,
+              max_value=min(total_final_registros, 1000),
+              value=min(total_final_registros, 10),
+          )
+        st.dataframe(df_final.head(num_filas_proc), use_container_width=True)
 
       # Nomenclatura automática (Mes anterior)
       hoy = datetime.now()
